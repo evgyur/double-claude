@@ -28,6 +28,25 @@ claude setup-token  # Fallback (log in with different account first)
 # 5. Switch subscriptions
 ~/claude-switch.sh fallback
 ~/claude-switch.sh primary
+
+# OR use /double command in Telegram:
+/double         # show current account
+/double primary # switch to primary
+/double fallback# switch to fallback
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `/double` | Show current account |
+| `/double primary` | Switch to primary (claude-cli) |
+| `/double fallback` | Switch to fallback account |
+
+Also works with the shell script:
+```bash
+~/claude-switch.sh primary
+~/claude-switch.sh fallback
 ```
 
 ## Features
