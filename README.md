@@ -39,9 +39,9 @@ claude setup-token  # Fallback (log in with different account first)
 
 | Command | Description |
 |---------|-------------|
-| `/double` | Show current account |
-| `/double primary` | Switch to first account (account1) |
-| `/double fallback` | Switch to second account (account2) |
+| `/double` | Switch to the other account |
+| `/double primary` | Switch to first account |
+| `/double fallback` | Switch to second account |
 
 Also works with the shell script:
 ```bash
