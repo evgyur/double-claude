@@ -1,14 +1,6 @@
-# Secrets
-auth-profiles.json
+# Secrets - never commit
+*.key
 *.token
-*.secret
-
-# Environment
+*secret*
+auth-profiles.json
 .env
-.env.local
-
-# Personal scripts with tokens
-claude-switch-local.sh
-
-# Logs
-*.log

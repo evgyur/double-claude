@@ -1,0 +1,76 @@
+#!/bin/bash
+# Claude Subscription Switcher
+# Usage: ./switch.sh {primary|fallback}
+#
+# Prerequisites:
+# 1. Two Claude OAuth profiles in ~/.openclaw/agents/main/agent/auth-profiles.json
+# 2. Profiles named: "anthropic:claude-cli" (primary) and "anthropic:fallback" (fallback)
+#
+# Setup:
+#   cp scripts/switch.sh.sample ~/claude-switch.sh
+#   chmod +x ~/claude-switch.sh
+
+set -e
+
+TARGET="${1:-}"
+AUTH_FILE="$HOME/.openclaw/agents/main/agent/auth-profiles.json"
+
+# Check if auth file exists
+if [ ! -f "$AUTH_FILE" ]; then
+    echo "Error: Auth file not found at $AUTH_FILE"
+    echo "Run 'claude setup-token' to configure OAuth profiles"
+    exit 1
+fi
+
+# Show current profile if no argument
+if [ -z "$TARGET" ]; then
+    echo "Usage: $0 {primary|fallback}"
+    echo ""
+    echo "Current active profile:"
+    jq -r '.lastGood.anthropic // "not set"' "$AUTH_FILE" 2>/dev/null || echo "N/A"
+    echo ""
+    echo "Available profiles:"
+    jq -r '.profiles | keys[] | select(startswith("anthropic:"))' "$AUTH_FILE" 2>/dev/null || echo "None"
+    exit 0
+fi
+
+# Validate target
+case "$TARGET" in
+    primary)
+        PROFILE_ID="anthropic:claude-cli"
+        ;;
+    fallback)
+        PROFILE_ID="anthropic:fallback"
+        ;;
+    *)
+        echo "Error: Target must be 'primary' or 'fallback'"
+        exit 1
+        ;;
+esac
+
+# Check if profile exists
+if ! jq -e ".profiles[\"$PROFILE_ID\"]" "$AUTH_FILE" > /dev/null 2>&1; then
+    echo "Error: Profile '$PROFILE_ID' not found in auth file"
+    echo "Run 'claude setup-token' to add this profile"
+    exit 1
+fi
+
+echo "Switching to: $PROFILE_ID"
+
+# Update lastGood in auth-profiles.json
+jq ".lastGood.anthropic = \"$PROFILE_ID\"" "$AUTH_FILE" > /tmp/auth-profiles-new.json
+mv /tmp/auth-profiles-new.json "$AUTH_FILE"
+
+echo "✓ Updated auth-profiles.json"
+
+# Restart gateway to apply changes
+echo "Restarting gateway..."
+if command -v openclaw &> /dev/null; then
+    openclaw gateway restart
+else
+    echo "Warning: openclaw CLI not found. Manually restart the gateway."
+fi
+
+echo "✓ Done! Active profile: $PROFILE_ID"
+echo ""
+echo "Run 'jq -r .lastGood.anthropic $AUTH_FILE' to verify"
