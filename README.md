@@ -1,6 +1,6 @@
 # Double Claude — Dual Subscription Manager for OpenClaw
 
-Seamlessly manage two Claude Pro/Team subscriptions with automatic failover and scheduled switching.
+Seamlessly manage **two different Claude Pro/Team subscriptions** with instant switching.
 
 ## Why?
 
@@ -26,13 +26,13 @@ claude setup-token  # Fallback (log in with different account first)
 # (copy from SKILL.md)
 
 # 5. Switch subscriptions
-~/claude-switch.sh fallback
 ~/claude-switch.sh primary
+~/claude-switch.sh fallback
 
 # OR use /double command in Telegram:
 /double         # show current account
-/double primary # switch to primary
-/double fallback# switch to fallback
+/double primary # switch to first account
+/double fallback# switch to second account
 ```
 
 ## Commands
@@ -40,8 +40,8 @@ claude setup-token  # Fallback (log in with different account first)
 | Command | Description |
 |---------|-------------|
 | `/double` | Show current account |
-| `/double primary` | Switch to primary (claude-cli) |
-| `/double fallback` | Switch to fallback account |
+| `/double primary` | Switch to first account (account1) |
+| `/double fallback` | Switch to second account (account2) |
 
 Also works with the shell script:
 ```bash
