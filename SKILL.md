@@ -1,24 +1,23 @@
 # Double Claude — Dual Subscription Manager
 
-Manage two Claude subscriptions with automatic failover and scheduled switching.
+Manage two Claude Pro subscriptions with instant switching between accounts.
 
 **Use this skill when:**
-- Your primary Claude subscription runs out mid-billing cycle
-- You want automatic fallback to a secondary subscription
-- You need scheduled switching back to primary when it resets
-- You want to maximize Claude usage across multiple Pro subscriptions
+- You have two Claude Pro accounts and want to switch between them
+- Primary account runs out mid-billing cycle
+- You want to use the second account as overflow
+- You need to maximize Claude usage across two subscriptions
 
-**Triggers:** "double claude", "claude failover", "switch claude subscription", "dual claude setup"
+**Triggers:** `/double`, "switch claude", "double claude"
 
 ---
 
 ## What This Skill Does
 
-1. **Dual OAuth profiles** — maintains two separate Claude subscription tokens
-2. **Automatic failover** — switches to backup when primary hits limits
-3. **Scheduled restoration** — cron job to switch back when primary resets
-4. **Manual control** — helper script for instant switching
-5. **Weekly reminders** — check usage and plan ahead
+1. **Two accounts** — switch between two Claude Pro subscriptions
+2. **Instant switching** — `/double` command switches immediately
+3. **Manual control** — helper script for switching
+4. **No auto-failover** — you control when to switch
 
 ---
 
@@ -185,6 +184,14 @@ openclaw cron add --json '{
 ---
 
 ## Usage
+
+### /double Command
+
+```
+/double         # switch to the other account
+/double primary # switch to first account
+/double fallback# switch to second account
+```
 
 ### Check Current Profile
 
