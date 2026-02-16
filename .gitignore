@@ -1,0 +1,14 @@
+# Secrets
+auth-profiles.json
+*.token
+*.secret
+
+# Environment
+.env
+.env.local
+
+# Personal scripts with tokens
+claude-switch-local.sh
+
+# Logs
+*.log
