@@ -442,14 +442,13 @@ openclaw cron add --json '{
 
 ## Kimi Fallback Chain
 
-When both Claude subscriptions hit rate limits, OpenClaw falls back to alternative models. Kimi (free API keys from kimi.com) is ideal for this — you can create multiple accounts and rotate keys.
+When both Claude subscriptions hit rate limits, OpenClaw falls back to alternative models. Kimi is ideal for this — you can get multiple API keys and rotate them.
 
 ### Why Kimi?
 
-- **Free** — no cost per token (kimi.com/coding gives free API keys)
 - **200K context** — matches Claude's context window
 - **128K output** — generous output limit
-- **Multiple keys** — create N accounts for N fallback slots
+- **Multiple keys** — get N keys for N fallback slots
 - **OpenAI-compatible API** — works with OpenClaw's openai-completions adapter
 
 ### Setup: Ask the user
@@ -521,15 +520,15 @@ Primary:    anthropic/claude-sonnet-4-5  (Claude, oauth profile: claude-cli)
                     ↓ rate limit
 Fallback 1: anthropic/claude-sonnet-4-5  (Claude, oauth profile: fallback)
                     ↓ rate limit
-Fallback 2: kimi4/kimi-for-coding        (Kimi key4, free)
+Fallback 2: kimi4/kimi-for-coding        (Kimi key4)
                     ↓ rate limit
-Fallback 3: kimi-coding/kimi-for-coding   (Kimi key1, free)
+Fallback 3: kimi-coding/kimi-for-coding   (Kimi key1)
                     ↓ rate limit
-Fallback 4: kimi2/kimi-for-coding         (Kimi key2, free)
+Fallback 4: kimi2/kimi-for-coding         (Kimi key2)
                     ↓ rate limit
-Fallback 5: kimi3/kimi-for-coding         (Kimi key3, free)
+Fallback 5: kimi3/kimi-for-coding         (Kimi key3)
                     ↓ rate limit
-Fallback 6: minimax/MiniMax-M2.5          (MiniMax, free)
+Fallback 6: minimax/MiniMax-M2.5          (MiniMax)
 ```
 
 ### Quick Add Script
@@ -589,10 +588,9 @@ echo "Restart gateway: systemctl --user restart openclaw-gateway"
 ### Getting Kimi API Keys
 
 1. Go to https://kimi.com
-2. Create account (use different email for each key)
+2. Create account
 3. Navigate to API settings / Coding section
 4. Copy the API key (`sk-kimi-...`)
-5. Repeat with different accounts for more keys
 
 ---
 
