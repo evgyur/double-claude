@@ -127,11 +127,16 @@ mv /tmp/auth-profiles-new.json "$AUTH_FILE"
 
 echo "✓ Updated auth-profiles.json"
 
-# Restart gateway
-echo "Restarting gateway..."
-openclaw gateway restart --note "$NOTE" --delay 2000
-
-echo "✓ Done! Active profile: $PROFILE_ID"
+# Full bigrestart (gateway restart does NOT reload profiles!)
+echo "Bigrestart gateway..."
+systemctl --user restart openclaw-gateway
+sleep 3
+if systemctl --user is-active openclaw-gateway > /dev/null 2>&1; then
+  echo "✓ Done! Active profile: $PROFILE_ID"
+else
+  echo "❌ Gateway failed to start! Check: journalctl --user -u openclaw-gateway -n 50"
+  exit 1
+fi
 EOF
 
 chmod +x ~/claude-switch.sh
@@ -185,7 +190,26 @@ openclaw cron add --json '{
 
 ## Usage
 
+### ⚠️ CRITICAL: Switching Requires Bigrestart
+
+**`openclaw gateway restart` does NOT apply profile changes to active sessions.**
+
+After changing `lastGood.anthropic`, you MUST run:
+```bash
+systemctl --user restart openclaw-gateway
+```
+
+This is a full process restart that forces profile reload. Without it, the old profile stays active.
+
 ### /double Command
+
+When user sends `/double`:
+
+1. Read current profile: `jq -r '.lastGood.anthropic' ~/.openclaw/agents/main/agent/auth-profiles.json`
+2. Toggle to the other one (claude-cli ↔ fallback)
+3. Write new lastGood
+4. **Run bigrestart:** `systemctl --user restart openclaw-gateway`
+5. Wait for reconnect, verify with `session_status`
 
 ```
 /double         # switch to the other account
@@ -271,11 +295,15 @@ claude setup-token
 
 ### Switch didn't take effect
 
-Restart gateway manually:
+**⚠️ CRITICAL:** `openclaw gateway restart` does NOT reload auth profiles for active sessions!
+
+You MUST do a full bigrestart:
 
 ```bash
-openclaw gateway restart
+systemctl --user restart openclaw-gateway
 ```
+
+This is the ONLY reliable way to force profile reload.
 
 ### How to check which subscription is currently active?
 
@@ -285,6 +313,23 @@ jq -r '.lastGood.anthropic' ~/.openclaw/agents/main/agent/auth-profiles.json
 
 # Method 2: Check OpenClaw status
 openclaw models status | grep anthropic
+```
+
+### "auth-profiles.json — not found" / Профили не найдены
+
+**Важно:** Профили лежат в правильном месте — `~/.openclaw/agents/main/agent/auth-profiles.json`
+
+**Не** в:
+- `~/.env`
+- `~/.openclaw/openclaw.json`
+
+Проверка профилей:
+```bash
+# Список профилей
+jq '.profiles | keys[] | select(startswith("anthropic:"))' ~/.openclaw/agents/main/agent/auth-profiles.json
+
+# Какой сейчас активен
+jq '.lastGood.anthropic' ~/.openclaw/agents/main/agent/auth-profiles.json
 ```
 
 ---
@@ -404,5 +449,24 @@ openclaw cron add --json '{
 ---
 
 **Skill created:** 2026-02-16  
-**Version:** 1.0  
-**Tested with:** OpenClaw 2026.2.15, Claude Code CLI v2.1.42
+**Version:** 1.1  
+**Tested with:** OpenClaw 2026.2.15, Claude Code CLI v2.1.42  
+**Changelog:** v1.1 — Fixed: gateway restart → bigrestart (systemctl restart) for reliable profile switching
+
+### "auth-profiles.json — not found" / Профили не найдены
+
+**Важно:** Профили лежат в правильном месте — `~/.openclaw/agents/main/agent/auth-profiles.json`
+
+**Не в:**
+- `~/.env`
+- `~/.openclaw/openclaw.json`
+
+**Проверка профилей:**
+
+```bash
+# Список профилей
+jq '.profiles | keys[] | select(startswith("anthropic:"))' ~/.openclaw/agents/main/agent/auth-profiles.json
+
+# Какой сейчас активен
+jq '.lastGood.anthropic' ~/.openclaw/agents/main/agent/auth-profiles.json
+```
