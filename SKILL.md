@@ -440,6 +440,162 @@ openclaw cron add --json '{
 
 ---
 
+## Kimi Fallback Chain
+
+When both Claude subscriptions hit rate limits, OpenClaw falls back to alternative models. Kimi (free API keys from kimi.com) is ideal for this — you can create multiple accounts and rotate keys.
+
+### Why Kimi?
+
+- **Free** — no cost per token (kimi.com/coding gives free API keys)
+- **200K context** — matches Claude's context window
+- **128K output** — generous output limit
+- **Multiple keys** — create N accounts for N fallback slots
+- **OpenAI-compatible API** — works with OpenClaw's openai-completions adapter
+
+### Setup: Ask the user
+
+When implementing, ask:
+
+1. **How many Kimi keys do you want in the fallback chain?** (recommended: 3-4)
+2. **Provide your API keys** (one per line, format: `sk-kimi-...`)
+3. **Where should Kimi sit in the chain?** (before or after minimax/other fallbacks)
+
+### Implementation
+
+For each key N (1-indexed), add to `openclaw.json`:
+
+**1. Provider definition** (`models.providers`):
+
+```json
+"kimi{N}": {
+  "baseUrl": "https://api.kimi.com/coding/v1",
+  "apiKey": "sk-kimi-YOUR_KEY_HERE",
+  "api": "openai-completions",
+  "models": [{
+    "id": "kimi-for-coding",
+    "name": "Kimi 2.5 Coding (key{N})",
+    "reasoning": false,
+    "input": ["text"],
+    "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
+    "contextWindow": 200000,
+    "maxTokens": 128000
+  }]
+}
+```
+
+**Note:** First key uses provider name `kimi-coding` (legacy), keys 2+ use `kimi2`, `kimi3`, `kimi4`, etc.
+
+**2. Auth profile** (`auth.profiles`):
+
+```json
+"kimi{N}:default": {
+  "provider": "kimi{N}",
+  "mode": "api_key"
+}
+```
+
+**3. Model alias** (`agents.defaults.models`):
+
+```json
+"kimi{N}/kimi-for-coding": {
+  "alias": "kimi{N}"
+}
+```
+
+**4. Fallback chain** (`agents.defaults.model.fallbacks`):
+
+```json
+"fallbacks": [
+  "kimi4/kimi-for-coding",
+  "kimi-coding/kimi-for-coding",
+  "kimi2/kimi-for-coding",
+  "kimi3/kimi-for-coding",
+  "minimax/MiniMax-M2.5"
+]
+```
+
+### Full Fallback Chain Example (current setup)
+
+```
+Primary:    anthropic/claude-sonnet-4-5  (Claude, oauth profile: claude-cli)
+                    ↓ rate limit
+Fallback 1: anthropic/claude-sonnet-4-5  (Claude, oauth profile: fallback)
+                    ↓ rate limit
+Fallback 2: kimi4/kimi-for-coding        (Kimi key4, free)
+                    ↓ rate limit
+Fallback 3: kimi-coding/kimi-for-coding   (Kimi key1, free)
+                    ↓ rate limit
+Fallback 4: kimi2/kimi-for-coding         (Kimi key2, free)
+                    ↓ rate limit
+Fallback 5: kimi3/kimi-for-coding         (Kimi key3, free)
+                    ↓ rate limit
+Fallback 6: minimax/MiniMax-M2.5          (MiniMax, free)
+```
+
+### Quick Add Script
+
+To add a new Kimi key to an existing chain:
+
+```bash
+#!/bin/bash
+# Usage: ./add-kimi-key.sh <key_number> <api_key>
+# Example: ./add-kimi-key.sh 5 sk-kimi-abc123...
+
+N=$1
+KEY=$2
+CONFIG="$HOME/.openclaw/openclaw.json"
+
+if [ -z "$N" ] || [ -z "$KEY" ]; then
+  echo "Usage: $0 <key_number> <api_key>"
+  exit 1
+fi
+
+PROVIDER="kimi${N}"
+
+# Add provider
+jq ".models.providers.\"$PROVIDER\" = {
+  \"baseUrl\": \"https://api.kimi.com/coding/v1\",
+  \"apiKey\": \"$KEY\",
+  \"api\": \"openai-completions\",
+  \"models\": [{
+    \"id\": \"kimi-for-coding\",
+    \"name\": \"Kimi 2.5 Coding (key${N})\",
+    \"reasoning\": false,
+    \"input\": [\"text\"],
+    \"cost\": {\"input\": 0, \"output\": 0, \"cacheRead\": 0, \"cacheWrite\": 0},
+    \"contextWindow\": 200000,
+    \"maxTokens\": 128000
+  }]
+}" "$CONFIG" > /tmp/oc-new.json && mv /tmp/oc-new.json "$CONFIG"
+
+# Add auth profile
+jq ".auth.profiles.\"${PROVIDER}:default\" = {
+  \"provider\": \"$PROVIDER\",
+  \"mode\": \"api_key\"
+}" "$CONFIG" > /tmp/oc-new.json && mv /tmp/oc-new.json "$CONFIG"
+
+# Add model alias
+jq ".agents.defaults.models.\"${PROVIDER}/kimi-for-coding\" = {
+  \"alias\": \"kimi${N}\"
+}" "$CONFIG" > /tmp/oc-new.json && mv /tmp/oc-new.json "$CONFIG"
+
+# Append to fallbacks (before minimax)
+jq ".agents.defaults.model.fallbacks |= (. - [\"minimax/MiniMax-M2.5\"]) + [\"${PROVIDER}/kimi-for-coding\", \"minimax/MiniMax-M2.5\"]" "$CONFIG" > /tmp/oc-new.json && mv /tmp/oc-new.json "$CONFIG"
+
+echo "✓ Added $PROVIDER with alias kimi${N}"
+echo "Restart gateway: systemctl --user restart openclaw-gateway"
+```
+
+### Getting Kimi API Keys
+
+1. Go to https://kimi.com
+2. Create account (use different email for each key)
+3. Navigate to API settings / Coding section
+4. Copy the API key (`sk-kimi-...`)
+5. Repeat with different accounts for more keys
+
+---
+
 ## Related
 
 - [OpenClaw Authentication Docs](https://docs.openclaw.ai/gateway/authentication)
@@ -449,9 +605,11 @@ openclaw cron add --json '{
 ---
 
 **Skill created:** 2026-02-16  
-**Version:** 1.1  
+**Version:** 1.2  
 **Tested with:** OpenClaw 2026.2.15, Claude Code CLI v2.1.42  
-**Changelog:** v1.1 — Fixed: gateway restart → bigrestart (systemctl restart) for reliable profile switching
+**Changelog:**
+- v1.2 — Added Kimi fallback chain setup, quick-add script, full chain documentation
+- v1.1 — Fixed: gateway restart → bigrestart (systemctl restart) for reliable profile switching
 
 ### "auth-profiles.json — not found" / Профили не найдены
 
